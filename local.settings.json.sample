@@ -1,0 +1,13 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;AccountName=XXXXXX;AccountKey=YOUR_KEY;EndpointSuffix=core.windows.net",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "kedademo01_STORAGE": "DefaultEndpointsProtocol=https;AccountName=XXXXXX;AccountKey=YOUR_KEY;EndpointSuffix=core.windows.net",
+    "VIDEOCONTAINER": "videos",
+    "THUMBNAILCONTAINER": "thumbnails",
+    "VIDEOFILESTORAGE": "DefaultEndpointsProtocol=https;AccountName=XXXXXX;AccountKey=YOUR_KEY;EndpointSuffix=core.windows.net",
+    "STORAGE_ACCOUNT_NAME": "XXXXXX",
+    "ACCOUNT_ACCESS_KEY": "YOUR_KEY"   
+  }
+}
