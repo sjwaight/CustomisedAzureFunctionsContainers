@@ -13,19 +13,16 @@ module.exports = async function (context, myQueueItem) {
       var blobService = azurestorage.createBlobService(process.env.VIDEOFILESTORAGE);
 
       var videoFileName = guid.v1() + '-' + myQueueItem;
-      var videoFilePath = '/tmp/' + videoFileName;
+      var videoFilePath = __dirname + '/' + videoFileName;
       var previewFileName = videoFileName + '_preview.jpg';
-      var previewFilePath = '/tmp/' + previewFileName;
+      var previewFilePath = __dirname + '/' + previewFileName;
 
-      // we use a file watcher because it seems sometimes the FFMPEG process hasn't exited
-      // an written file to disk before we try and read it.
       var watcher = chokidar.watch(previewFilePath, {ignored: /^\./, persistent: true, awaitWriteFinish: true, ignoreInitial: true});
 
       await downloadVideoFile(blobService, myQueueItem, videoFilePath);
 
       context.log('File Downloaded, starting preview creation.');
 
-      // call ffmpeg-generate-video-preview to create our preview
       await generatePreview({
         input: videoFilePath,
         output: previewFilePath,
@@ -41,7 +38,6 @@ module.exports = async function (context, myQueueItem) {
 
       context.log('Tidying up temporary files');
 
-      // delete the files as they won't be needed again
       fs.unlinkSync(videoFilePath);
       fs.unlinkSync(previewFilePath);
 
