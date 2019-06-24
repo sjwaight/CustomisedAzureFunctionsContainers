@@ -1,11 +1,5 @@
-# QueueTrigger - JavaScript
+# Video Thumbnailer - QueueTrigger - JavaScript
 
-The `QueueTrigger` makes it incredibly easy to react to new Queues inside of Azure Queue Storage. This sample demonstrates a simple use case of processing data from a given Queue using C#.
+This Azure Function is triggered by a new Azure Storage Queue message. The Queue message contains the name of a video file we wish to thumbnail.
 
-## How it works
-
-For a `QueueTrigger` to work, you provide a path which dictates where the queue messages are located inside your container.
-
-## Learn more
-
-<TODO> Documentation
+The video file must have been uploaded into an Azure Blob Storage Account Container that has been configured as the file source for the Function.
