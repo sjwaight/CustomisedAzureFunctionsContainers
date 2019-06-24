@@ -1,0 +1,63 @@
+data:
+  AzureWebJobsStorage: XXXXX
+  FUNCTIONS_WORKER_RUNTIME: XXXX
+  kedademo01_STORAGE: XXXXX
+  VIDEOCONTAINER: XXXXX
+  THUMBNAILCONTAINER: XXXX
+  VIDEOFILESTORAGE: XXXXX
+  STORAGE_ACCOUNT_NAME: XXXX
+  ACCOUNT_ACCESS_KEY: XXXXX
+apiVersion: v1
+kind: Secret
+metadata:
+  name: video-thumbnailer
+  namespace: default
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: video-thumbnailer
+  namespace: default
+  labels:
+    app: video-thumbnailer
+spec:
+  selector:
+    matchLabels:
+      app: video-thumbnailer
+  template:
+    metadata:
+      labels:
+        app: video-thumbnailer
+    spec:
+      containers:
+      - name: video-thumbnailer
+        image: my_acr_instance.azurecr.io/custom-func-node:1.3
+        env:
+        - name: AzureFunctionsJobHost__functions__0
+          value: VideoThumbnailProcessor
+        envFrom:
+        - secretRef:
+            name: video-thumbnailer
+      tolerations:
+        - operator: Exists
+---
+apiVersion: keda.k8s.io/v1alpha1
+kind: ScaledObject
+metadata:
+  name: video-thumbnailer
+  namespace: default
+  labels:
+    deploymentName: video-thumbnailer
+spec:
+  scaleTargetRef:
+    deploymentName: video-thumbnailer
+  triggers:
+  - type: azure-queue
+    metadata:
+      name: myQueueItem
+      type: queueTrigger
+      direction: in
+      queueName: new-videos
+      queueLength: '2'
+      connection: kedademo01_STORAGE
+---
