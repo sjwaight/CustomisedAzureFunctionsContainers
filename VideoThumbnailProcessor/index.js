@@ -35,7 +35,7 @@ module.exports = async function (context, myQueueItem) {
         cols: 10
       });
 
-      await checkForFileAndUpload(context, watcher, blobService, previewFileName, "keyframes");
+      await checkForFileAndUpload(context, watcher, blobService, previewFilePath, previewFileName, "keyframes");
 
       watcher.close();
 
@@ -65,15 +65,15 @@ const downloadVideoFile = async (azureBlobService, videoFileName, localFileName)
   });
 };
 
-const checkForFileAndUpload = async (context, watcher, blobService, fileName, fileType) => {
+const checkForFileAndUpload = async (context, watcher, blobService, localFileName, remoteFileName, fileType) => {
 
   context.log(`Done with preview creation, uploading ${fileType} file.`);
 
   return new Promise((resolve, reject) => {
 
-    watcher.on('add', (fileName) => {
+    watcher.on('add', (localFileName) => {
 
-      blobService.createBlockBlobFromLocalFile(process.env.THUMBNAILCONTAINER, fileName, fileName, (error, result, response) => {
+      blobService.createBlockBlobFromLocalFile(process.env.THUMBNAILCONTAINER, remoteFileName, localFileName, (error, result, response) => {
         if (error) {
             context.log(error);
             reject(error);
