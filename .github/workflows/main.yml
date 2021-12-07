@@ -2,9 +2,11 @@ name: Build Docker Image and Publish to ACR
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
+  workflow_dispatch:
+    
 
 jobs:
   build:
