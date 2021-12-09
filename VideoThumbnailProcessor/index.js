@@ -1,13 +1,17 @@
 const generatePreview = require('ffmpeg-generate-video-preview');
-const azurestorage = require('azure-storage');
+const { BlobServiceClient, StorageSharedKeyCredential } = require("@azure/storage-blob");
 const fs = require('fs');
 const chokidar = require('chokidar');
+
+// Azure Storage Account name and key
+const account = process.env.STORAGE_ACCOUNT_NAME || "";
+const accountKey = process.env.ACCOUNT_ACCESS_KEY || "";
+const sharedKeyCredential = new StorageSharedKeyCredential(account, accountKey);
+const blobServiceClient = new BlobServiceClient(`https://${account}.blob.core.windows.net`,sharedKeyCredential);
 
 module.exports = async function (context, myQueueItem) {
 
     try {
-
-      var blobService = azurestorage.createBlobService(process.env.VIDEOFILESTORAGE);
 
       // myQueueItem contains the absolute URL to the blob
       // The assumption is that the filename is already unique
@@ -20,8 +24,11 @@ module.exports = async function (context, myQueueItem) {
       var previewFilePath = __dirname + '/' + previewFileName;
 
       var watcher = chokidar.watch(previewFilePath, {ignored: /^\./, persistent: true, awaitWriteFinish: true, ignoreInitial: true});
+    
+      var containerClient = blobServiceClient.getContainerClient(process.env.VIDEOCONTAINER);
+      var blockBlobClient = containerClient.getBlockBlobClient(videoFileName);
 
-      await downloadVideoFile(blobService, videoFileName, videoFilePath);
+      await blockBlobClient.downloadToFile(videoFilePath)
 
       context.log('File downloaded, starting preview creation.');
 
@@ -35,14 +42,22 @@ module.exports = async function (context, myQueueItem) {
         cols: 10
       });
 
-      await checkForFileAndUpload(context, watcher, blobService, previewFilePath, previewFileName, "keyframes");
+      await checkForFileCreation(context, watcher, previewFilePath, "keyframes");
+
+      context.log('Uploading preview image to Azure Storage.');
+
+      containerClient = blobServiceClient.getContainerClient(process.env.THUMBNAILCONTAINER);
+      blockBlobClient = containerClient.getBlockBlobClient(previewFileName);
+      await blockBlobClient.uploadFile(previewFilePath);
 
       watcher.close();
 
-      context.log('Tidying up temporary files');
+      context.log('Tidying up temporary files.');
 
       fs.unlinkSync(videoFilePath);
       fs.unlinkSync(previewFilePath);
+
+      context.log('All done!');
 
       return {
           res: previewFilePath
@@ -53,35 +68,16 @@ module.exports = async function (context, myQueueItem) {
     }
 }
 
-const downloadVideoFile = async (azureBlobService, videoFileName, localFileName) => {
-  return new Promise((resolve, reject) => {
-    azureBlobService.getBlobToLocalFile(process.env.VIDEOCONTAINER, videoFileName, localFileName, function(error, localFileName) {
-          if (error) {
-              reject(error);
-          } else {
-              resolve(localFileName);
-          }
-      });
-  });
-};
-
-const checkForFileAndUpload = async (context, watcher, blobService, localFileName, remoteFileName, fileType) => {
-
-  context.log(`Done with preview creation, uploading ${fileType} file.`);
+// Wrap Chokidar as it is a sync call and we need async behaviour.
+// we want to ensure that the preview file has been written to disk and
+// the file writer has close the stream before we try and upload.
+const checkForFileCreation = async (context, watcher, localFileName, fileType) => {
 
   return new Promise((resolve, reject) => {
 
-    watcher.on('add', (localFileName) => {
-
-      blobService.createBlockBlobFromLocalFile(process.env.THUMBNAILCONTAINER, remoteFileName, localFileName, (error, result, response) => {
-        if (error) {
-            context.log(error);
-            reject(error);
-        } else {
-          context.log(`Local file "${result.name}" was uploaded.`);
-          resolve(response);
-        }
-      });
+    watcher.on('add', localFileName => {
+        context.log(`Local file was created.`);
+        resolve();
     });
   });
 }
